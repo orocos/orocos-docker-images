@@ -1,0 +1,10 @@
+{
+  "build": {
+    "event-handlers": ["console_direct+"],
+    "merge-install": true
+  },
+  "test": {
+    "event-handlers": ["console_direct+"],
+    "executor": "sequential"
+  }
+}
