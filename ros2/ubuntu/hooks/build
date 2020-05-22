@@ -1,0 +1,9 @@
+#!/bin/bash
+# Build hook for Docker Hub.
+# See https://docs.docker.com/docker-hub/builds/advanced/.
+
+#DOCKER_TAG=eloquent-ros-base-bionic
+ROS_DISTRO=${DOCKER_TAG%%-*}
+UBUNTU_DISTRO=${DOCKER_TAG##*-}
+
+docker build -t $IMAGE_NAME --build-arg ROS_DISTRO=${ROS_DISTRO} --build-arg UBUNTU_DISTRO=${UBUNTU_DISTRO} .
