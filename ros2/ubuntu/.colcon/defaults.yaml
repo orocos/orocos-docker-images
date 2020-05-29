@@ -6,5 +6,6 @@
   "test": {
     "event-handlers": ["console_direct+"],
     "executor": "sequential"
+    "merge-install": true
   }
 }
