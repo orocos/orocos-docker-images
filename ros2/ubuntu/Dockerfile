@@ -22,22 +22,22 @@ ARG OROCOS_TOOLCHAIN_BRANCH
 RUN git clone --recursive https://github.com/orocos-toolchain/orocos_toolchain.git -b ${OROCOS_TOOLCHAIN_BRANCH} /build/orocos_toolchain
 RUN cd /build/orocos_toolchain \
     && . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && colcon build \
+    && DESTDIR=/stage colcon build \
         --event-handlers console_direct+ \
-        --install-base "/opt/orocos/${ROS_DISTRO}" \
+        --install-base /opt/ros/${ROS_DISTRO} \
         --merge-install \
         --cmake-args \
             \ -DCMAKE_BUILD_TYPE=Release \
+            \ -DCMAKE_FIND_ROOT_PATH=/stage \
+            \ -DCMAKE_PREFIX_PATH=/opt/ros/${ROS_DISTRO} \
             \ -DENABLE_CORBA=ON \
-            \ -DCORBA_IMPLEMENTATION=OMNIORB
+            \ -DCORBA_IMPLEMENTATION=OMNIORB \
+            \ -DOROCOS_INSTALL_INTO_PREFIX_ROOT=ON
 
-## Stage deploy: copy the install-space to /opt/orocos/${ROS_DISTRO} as a
+## Stage deploy: copy the install-space to /opt/ros/${ROS_DISTRO} as a
 ## new image layer based on deps
 FROM deps AS deploy
-COPY --from=build /opt/orocos/${ROS_DISTRO} /opt/orocos/${ROS_DISTRO}
+COPY --from=build /stage/opt/ros/${ROS_DISTRO} /opt/ros/${ROS_DISTRO}
 
 # default config file for colcon
 COPY .colcon/defaults.yaml /root/.colcon/defaults.yaml
-
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT [ "/entrypoint.sh" ]
