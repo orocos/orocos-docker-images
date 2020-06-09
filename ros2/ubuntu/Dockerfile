@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y \
     libreadline-dev \
     libxml-xpath-perl \
     omniorb omniidl omniorb-idl omniorb-nameserver libomniorb4-dev \
-    ruby ruby-facets bundler \
+    ruby bundler \
+    $([[ "$UBUNTU_DISTRO" != "focal" ]] && echo "ruby-facets") \
     && rm -rf /var/lib/apt/lists/*
 
 ## Stage build: clone and build orocos_toolchain with colcon
