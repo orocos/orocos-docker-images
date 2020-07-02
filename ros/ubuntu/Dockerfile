@@ -54,7 +54,7 @@ RUN cd /build/orocos_underlay_ws \
             -DCMAKE_FIND_ROOT_PATH=/stage \
             -DCATKIN_DEVEL_PREFIX=/build/orocos_underlay_ws/devel \
             -DCMAKE_INSTALL_PREFIX=/opt/ros/${ROS_DISTRO} \
-            -DCATKIN_BLACKLIST_PACKAGES="rtt_tf;rtt_rosdeployment;tf_conversions" \
+            -DCATKIN_BLACKLIST_PACKAGES="rtt_tf;rtt_rosdeployment" \
     && DESTDIR=/stage \
         catkin_make install \
             -DCMAKE_INSTALL_PREFIX=/opt/ros/${ROS_DISTRO}
