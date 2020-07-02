@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
     libxml-xpath-perl \
     libxml2-dev \
     libeigen3-dev \
+    sip-dev \
+    libbullet-dev \
+    libangles-dev \
     omniorb omniidl omniorb-idl omniorb-nameserver libomniorb4-dev \
     ruby bundler \
     $([[ "$UBUNTU_DISTRO" != "focal" ]] && echo "ruby-facets") \
@@ -22,7 +25,8 @@ RUN apt-get update && apt-get install -y \
 ## Stage build: clone and build orocos_toolchain with colcon
 FROM deps AS build
 ARG OROCOS_TOOLCHAIN_BRANCH
-RUN git clone --recursive https://github.com/orocos-toolchain/orocos_toolchain.git -b ${OROCOS_TOOLCHAIN_BRANCH} /build/orocos_ws/src/orocos_toolchain
+RUN git clone --recursive https://github.com/orocos-toolchain/orocos_toolchain.git -b ${OROCOS_TOOLCHAIN_BRANCH} /build/orocos_ws/src/orocos_toolchain \
+    && git clone --recursive https://github.com/orocos/orocos_kinematics_dynamics.git -b v1.4.0 /build/orocos_ws/src/orocos_kinematics_dynamics
 RUN cd /build/orocos_ws \
     && . /opt/ros/${ROS_DISTRO}/setup.sh \
     && DESTDIR=/stage \
@@ -37,7 +41,10 @@ RUN cd /build/orocos_ws \
             -DCORBA_IMPLEMENTATION=OMNIORB \
             -DOROCOS_INSTALL_INTO_PREFIX_ROOT=ON
 
-RUN git clone --recursive https://github.com/orocos/rtt_ros_integration.git -b ${OROCOS_TOOLCHAIN_BRANCH} /build/orocos_underlay_ws/src/rtt_ros_integration
+RUN git clone --recursive https://github.com/orocos/rtt_ros_integration.git -b ${OROCOS_TOOLCHAIN_BRANCH} /build/orocos_underlay_ws/src/rtt_ros_integration \
+    && git clone --recursive https://github.com/ros/geometry2.git -b ${ROS_DISTRO}-devel /build/orocos_underlay_ws/src/geometry2 \
+    && git clone --recursive https://github.com/ros/geometry.git -b ${ROS_DISTRO}-devel /build/orocos_underlay_ws/src/geometry \
+    && git clone --recursive https://github.com/ros/angles.git -b master /build/orocos_underlay_ws/src/angles
 RUN cd /build/orocos_underlay_ws \
     && . /opt/ros/${ROS_DISTRO}/setup.sh \
     && . /stage/opt/ros/${ROS_DISTRO}/local_setup.sh \
@@ -47,7 +54,7 @@ RUN cd /build/orocos_underlay_ws \
             -DCMAKE_FIND_ROOT_PATH=/stage \
             -DCATKIN_DEVEL_PREFIX=/build/orocos_underlay_ws/devel \
             -DCMAKE_INSTALL_PREFIX=/opt/ros/${ROS_DISTRO} \
-            -DCATKIN_BLACKLIST_PACKAGES="rtt_tf;rtt_kdl_conversions;rtt_tf2_msgs;rtt_rosdeployment" \
+            -DCATKIN_BLACKLIST_PACKAGES="rtt_tf;rtt_rosdeployment;tf_conversions" \
     && DESTDIR=/stage \
         catkin_make install \
             -DCMAKE_INSTALL_PREFIX=/opt/ros/${ROS_DISTRO}
