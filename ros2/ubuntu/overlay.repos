@@ -1,0 +1,9 @@
+repositories:
+  rtt_ros2_integration:
+    type: git
+    url: https://github.com/orocos/rtt_ros2_integration.git
+    version: master
+  rtt_ros2_common_interfaces:
+    type: git
+    url: https://github.com/orocos/rtt_ros2_common_interfaces.git
+    version: master

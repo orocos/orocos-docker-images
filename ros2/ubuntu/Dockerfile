@@ -1,44 +1,85 @@
-## Provide Orocos Toolchain (RTT/OCL) on top of the official ROS 2 docker images.
-ARG OROCOS_TOOLCHAIN_BRANCH=ros2
+## Provide Orocos Toolchain (RTT/OCL) and rtt_ros2_integration overlay workspace on top of the
+## official ROS 2 docker images.
+
 ARG ROS_DISTRO
 ARG UBUNTU_DISTRO
 
-## Stage deps: install additional Orocos Toolchain (with CORBA) dependencies
-FROM ros:${ROS_DISTRO}-ros-base-${UBUNTU_DISTRO} AS deps
-RUN apt-get update && apt-get install -y \
-    libboost-all-dev \
-    liblua5.1-0-dev \
-    libncurses5-dev \
-    libnetcdf-dev \
-    libreadline-dev \
-    libxml-xpath-perl \
-    omniorb omniidl omniorb-idl omniorb-nameserver libomniorb4-dev \
-    ruby bundler \
-    $([[ "$UBUNTU_DISTRO" != "focal" ]] && echo "ruby-facets") \
-    && rm -rf /var/lib/apt/lists/*
-
-## Stage build: clone and build orocos_toolchain with colcon
-FROM deps AS build
-ARG OROCOS_TOOLCHAIN_BRANCH
-RUN git clone --recursive https://github.com/orocos-toolchain/orocos_toolchain.git -b ${OROCOS_TOOLCHAIN_BRANCH} /build/orocos_toolchain
-RUN cd /build/orocos_toolchain \
-    && . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && DESTDIR=/stage colcon build \
-        --event-handlers console_direct+ \
-        --install-base /opt/ros/${ROS_DISTRO} \
-        --merge-install \
-        --cmake-args \
-            \ -DCMAKE_BUILD_TYPE=Release \
-            \ -DCMAKE_FIND_ROOT_PATH=/stage \
-            \ -DCMAKE_PREFIX_PATH=/opt/ros/${ROS_DISTRO} \
-            \ -DENABLE_CORBA=ON \
-            \ -DCORBA_IMPLEMENTATION=OMNIORB \
-            \ -DOROCOS_INSTALL_INTO_PREFIX_ROOT=ON
-
-## Stage deploy: copy the install-space to /opt/ros/${ROS_DISTRO} as a
-## new image layer based on deps
-FROM deps AS deploy
-COPY --from=build /stage/opt/ros/${ROS_DISTRO} /opt/ros/${ROS_DISTRO}
+## *************************************************************************************************
+## Stage base: prepare build environment
+## *************************************************************************************************
+FROM ros:${ROS_DISTRO}-ros-base-${UBUNTU_DISTRO} AS base
 
 # default config file for colcon
 COPY .colcon/defaults.yaml /root/.colcon/defaults.yaml
+
+# add custom rosdep rule file and update rosdep database
+COPY prereqs.yaml /etc/ros/rosdep/
+RUN echo "yaml file:///etc/ros/rosdep/prereqs.yaml" > /etc/ros/rosdep/sources.list.d/10-custom.list
+RUN rosdep update
+
+# setup new entrypoint and default command
+COPY orocos_entrypoint.sh /orocos_entrypoint.sh
+ENTRYPOINT [ "/orocos_entrypoint.sh" ]
+CMD [ "bash" ]
+
+## *************************************************************************************************
+## Stage orocos_toolchain: clone, build and install Orocos Toolchain using CMake (with CORBA)
+## *************************************************************************************************
+FROM base AS orocos_toolchain
+
+COPY orocos_toolchain.repos /build/
+RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
+    && cd /build/orocos_toolchain \
+    && . /opt/ros/${ROS_DISTRO}/local_setup.sh \
+    #
+    # Install dependencies with rosdep
+    && apt-get update \
+    && apt-get install -y ruby \
+    && rosdep install -y --from-path . --ignore-src \
+    && rm -rf /var/lib/apt/lists/* \
+    #
+    # Build the workspace
+    && colcon build \
+        --event-handlers console_direct+ \
+        --install-base /opt/orocos/${ROS_DISTRO} \
+        --merge-install \
+        --cmake-args \
+            \ -DBUILD_TESTING=OFF \
+            \ -DCMAKE_BUILD_TYPE=Release \
+            \ -DENABLE_CORBA=ON \
+            \ -DCORBA_IMPLEMENTATION=OMNIORB \
+            \ -DOROCOS_INSTALL_INTO_PREFIX_ROOT=ON \
+    #
+    # Cleanup
+    && rm -rf /build
+
+## *************************************************************************************************
+## Stage overlay: clone, build and install overlay workspaces to /opt/ros/${ROS_DISTRO}
+## *************************************************************************************************
+FROM orocos_toolchain AS overlay
+
+COPY overlay.repos /build/
+RUN mkdir -p /build/src \
+    && cd /build \
+    && vcs import --recursive src < overlay.repos \
+    && . /opt/ros/${ROS_DISTRO}/local_setup.sh \
+    && . /opt/orocos/${ROS_DISTRO}/local_setup.sh \
+    #
+    # Install dependencies with rosdep
+    && apt-get update \
+    && ROS_PACKAGE_PATH=/opt/orocos/${ROS_DISTRO}/share:/opt/ros/${ROS_DISTRO}/share \
+           rosdep install -y --from-path . --ignore-src \
+    && rm -rf /var/lib/apt/lists/* \
+    #
+    # Build the workspace
+    && colcon build \
+        --event-handlers console_direct+ \
+        --install-base /opt/orocos/${ROS_DISTRO} \
+        --merge-install \
+        --parallel-workers 2 \
+        --cmake-args \
+            \ -DBUILD_TESTING=OFF \
+            \ -DCMAKE_BUILD_TYPE=Release \
+    #
+    # Cleanup
+    && rm -rf /build

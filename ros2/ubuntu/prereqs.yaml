@@ -1,0 +1,10 @@
+metaruby:
+  debian:
+    gem: metaruby
+  ubuntu:
+    gem: metaruby
+utilrb:
+  debian:
+    gem: utilrb
+  ubuntu:
+    gem: utilrb
