@@ -2,6 +2,7 @@
 # Use gem instead.
 facets:
   ubuntu:
+    '*': ruby-facets
     focal:
       gem: facets
 
