@@ -58,10 +58,9 @@ RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
 ## *************************************************************************************************
 FROM orocos_toolchain AS overlay
 
-COPY overlay.repos /build/
-RUN mkdir -p /build/src \
+COPY overlay.repos /build/src/
+RUN vcs import --recursive /build/src < /build/src/overlay.repos \
     && cd /build \
-    && vcs import --recursive src < overlay.repos \
     && . /opt/ros/${ROS_DISTRO}/local_setup.sh \
     && . /opt/orocos/${ROS_DISTRO}/local_setup.sh \
     #
@@ -76,7 +75,6 @@ RUN mkdir -p /build/src \
         --event-handlers console_direct+ \
         --install-base /opt/orocos/${ROS_DISTRO} \
         --merge-install \
-        --parallel-workers 2 \
         --cmake-args \
             \ -DBUILD_TESTING=OFF \
             \ -DCMAKE_BUILD_TYPE=Release \
