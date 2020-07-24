@@ -1,0 +1,19 @@
+# Package ruby-facets does not exist anymore since Ubuntu Focal.
+# Use gem instead.
+facets:
+  ubuntu:
+    '*': ruby-facets
+    focal:
+      gem: facets
+
+# Use metaruby and utilrb from rubygems.org.
+metaruby:
+  debian:
+    gem: metaruby
+  ubuntu:
+    gem: metaruby
+utilrb:
+  debian:
+    gem: utilrb
+  ubuntu:
+    gem: utilrb

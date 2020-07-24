@@ -1,0 +1,24 @@
+#!/bin/bash
+# Build hook for Docker Hub.
+# See https://docs.docker.com/docker-hub/builds/advanced/.
+
+#DOCKER_TAG=eloquent-ros-base-bionic
+ROS_DISTRO=${DOCKER_TAG%%-*}
+UBUNTU_DISTRO=${DOCKER_TAG##*-}
+
+# Build and push the stage orocos_toolchain first.
+# Caching should make sure that the actual build step only rebuilds the final stage overlay.
+docker build \
+  -t orocos/ros-ci:${DOCKER_TAG} \
+  --build-arg ROS_DISTRO=${ROS_DISTRO} \
+  --build-arg UBUNTU_DISTRO=${UBUNTU_DISTRO} \
+  --target orocos_toolchain \
+  .
+docker push orocos/ros-ci:${DOCKER_TAG}
+
+# Only then build the final stage. It will be pushed by Docker Hub.
+docker build \
+  -t orocos/ros:${DOCKER_TAG} \
+  --build-arg ROS_DISTRO=${ROS_DISTRO} \
+  --build-arg UBUNTU_DISTRO=${UBUNTU_DISTRO} \
+  .
