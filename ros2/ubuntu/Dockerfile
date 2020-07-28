@@ -3,6 +3,10 @@
 
 ARG ROS_DISTRO
 ARG UBUNTU_DISTRO
+
+# optional arguments required for building on systems with limited CPU or memory resources
+# or to customize the build
+ARG COLCON_ARGS=""
 ARG MAKEFLAGS=""
 
 ## *************************************************************************************************
@@ -27,6 +31,8 @@ CMD [ "bash" ]
 ## Stage orocos_toolchain: clone, build and install Orocos Toolchain using CMake (with CORBA)
 ## *************************************************************************************************
 FROM base AS orocos_toolchain
+ARG COLCON_ARGS
+ARG MAKEFLAGS
 
 COPY orocos_toolchain.repos /build/
 RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
@@ -40,7 +46,8 @@ RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
     && rm -rf /var/lib/apt/lists/* \
     #
     # Build the workspace
-    && colcon build \
+    && MAKEFLAGS="${MAKEFLAGS}" \
+       colcon build \
         --event-handlers console_direct+ \
         --install-base /opt/orocos/${ROS_DISTRO} \
         --merge-install \
@@ -50,6 +57,7 @@ RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
             \ -DENABLE_CORBA=ON \
             \ -DCORBA_IMPLEMENTATION=OMNIORB \
             \ -DOROCOS_INSTALL_INTO_PREFIX_ROOT=ON \
+        ${COLCON_ARGS} \
     #
     # Cleanup
     && rm -rf /build
@@ -58,6 +66,7 @@ RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
 ## Stage overlay: clone, build and install overlay workspaces to /opt/ros/${ROS_DISTRO}
 ## *************************************************************************************************
 FROM orocos_toolchain AS overlay
+ARG COLCON_ARGS
 ARG MAKEFLAGS
 
 COPY overlay.repos /build/src/
@@ -81,6 +90,7 @@ RUN vcs import --recursive /build/src < /build/src/overlay.repos \
         --cmake-args \
             \ -DBUILD_TESTING=OFF \
             \ -DCMAKE_BUILD_TYPE=Release \
+        ${COLCON_ARGS} \
     #
     # Cleanup
     && rm -rf /build
