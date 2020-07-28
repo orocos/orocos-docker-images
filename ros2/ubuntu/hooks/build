@@ -7,7 +7,7 @@ ROS_DISTRO=${DOCKER_TAG%%-*}
 UBUNTU_DISTRO=${DOCKER_TAG##*-}
 
 # Build and push the stage orocos_toolchain first.
-# Caching should make sure that the actual build step only rebuilds the final stage overlay.
+# Caching should make sure that the subsequent build step only builds the final stage overlay.
 docker build \
   -t orocos/ros2-ci:${DOCKER_TAG} \
   --build-arg ROS_DISTRO=${ROS_DISTRO} \
@@ -16,9 +16,11 @@ docker build \
   .
 docker push orocos/ros2-ci:${DOCKER_TAG}
 
-# Only then build the final stage. It will be pushed by Docker Hub.
+# Build the final stage. It will be pushed implicitly by Docker Hub.
+# Note: The number of parallel jobs is limited to 1 because of limited memory resources (MAKEFLAGS).
 docker build \
   -t orocos/ros2:${DOCKER_TAG} \
   --build-arg ROS_DISTRO=${ROS_DISTRO} \
   --build-arg UBUNTU_DISTRO=${UBUNTU_DISTRO} \
+  --build-arg MAKEFLAGS="-j1" \
   .

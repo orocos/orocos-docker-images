@@ -3,6 +3,7 @@
 
 ARG ROS_DISTRO
 ARG UBUNTU_DISTRO
+ARG MAKEFLAGS=""
 
 ## *************************************************************************************************
 ## Stage base: prepare build environment
@@ -57,6 +58,7 @@ RUN vcs import --recursive /build < /build/orocos_toolchain.repos \
 ## Stage overlay: clone, build and install overlay workspaces to /opt/ros/${ROS_DISTRO}
 ## *************************************************************************************************
 FROM orocos_toolchain AS overlay
+ARG MAKEFLAGS
 
 COPY overlay.repos /build/src/
 RUN vcs import --recursive /build/src < /build/src/overlay.repos \
@@ -71,7 +73,8 @@ RUN vcs import --recursive /build/src < /build/src/overlay.repos \
     && rm -rf /var/lib/apt/lists/* \
     #
     # Build the workspace
-    && colcon build \
+    && MAKEFLAGS="${MAKEFLAGS}" \
+       colcon build \
         --event-handlers console_direct+ \
         --install-base /opt/orocos/${ROS_DISTRO} \
         --merge-install \
