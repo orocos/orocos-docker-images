@@ -2,8 +2,35 @@
 # Build hook for Docker Hub.
 # See https://docs.docker.com/docker-hub/builds/advanced/.
 
+# abort on error
+set -e
+
 #DOCKER_TAG=eloquent-ros-base-bionic
 ROS_DISTRO=${DOCKER_TAG%%-*}
 UBUNTU_DISTRO=${DOCKER_TAG##*-}
 
-docker build -t $IMAGE_NAME --build-arg ROS_DISTRO=${ROS_DISTRO} --build-arg UBUNTU_DISTRO=${UBUNTU_DISTRO} .
+# Build arguments
+# Note: We do not allow to run colcon executors in parallel (COLCON_ARGS) and limit the number of
+# parallel make jobs is limited to 1 (MAKEFLAGS) because of limited memory resources for automated
+# builds (https://success.docker.com/article/what-are-the-current-resource-limits-placed-on-automated-builds).
+BUILD_ARGS=(
+  --build-arg ROS_DISTRO=${ROS_DISTRO} \
+  --build-arg UBUNTU_DISTRO=${UBUNTU_DISTRO} \
+  --build-arg COLCON_ARGS="--executor sequential" \
+  --build-arg MAKEFLAGS="-j1" \
+)
+
+# Build the final stage first. It will be pushed implicitly by Docker Hub.
+docker build \
+  -t orocos/ros2:${DOCKER_TAG} \
+  "${BUILD_ARGS[@]}" \
+  .
+
+# Build and push the intermediate stage orocos_toolchain as orocos/ros2-ci:${DOCKER_TAGS}
+# (for ROS integration CI). Caching should make sure that none of the build steps executes again.
+docker build \
+  -t orocos/ros2-ci:${DOCKER_TAG} \
+  --target orocos_toolchain \
+  "${BUILD_ARGS[@]}" \
+  .
+docker push orocos/ros2-ci:${DOCKER_TAG}

@@ -1,0 +1,5 @@
+repositories:
+  orocos_toolchain:
+    type: git
+    url: https://github.com/orocos-toolchain/orocos_toolchain.git
+    version: ros2
