@@ -75,6 +75,9 @@ RUN vcs import --recursive /build/src < /build/src/overlay.repos \
     && . /opt/ros/${ROS_DISTRO}/local_setup.sh \
     && . /opt/orocos/${ROS_DISTRO}/local_setup.sh \
     #
+    # Ignore test packages
+    && touch src/rtt_ros2_integration/tests/COLCON_IGNORE \
+    #
     # Install dependencies with rosdep
     && apt-get update \
     && ROS_PACKAGE_PATH=/opt/orocos/${ROS_DISTRO}/share:/opt/ros/${ROS_DISTRO}/share \
